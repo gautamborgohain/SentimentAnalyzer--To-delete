@@ -2,6 +2,7 @@ import re
 from utilities import *
 import pandas
 import openpyxl as xl
+from nltk.corpus import stopwords
 
 class process_tweets:
 
@@ -16,21 +17,35 @@ class process_tweets:
         #Remove additional white spaces
         tweet = re.sub('[\s]+', ' ', tweet)
         #Replace #word with word
-        tweet = re.sub(r'#([^\s]+)', r'\1', tweet)
+        #tweet = re.sub(r'#([^\s]+)', r'\1', tweet)
         #trim
         tweet = tweet.strip('\'"')
 
         return tweet
+
+    def replaceTwoOrMore(self,tweet):
+        #look for 2 or more repetitions of character and replace with the character itself
+        pattern = re.compile(r"(.)\1{1,}", re.DOTALL)
+        return pattern.sub(r"\1\1", tweet)
+
+    def removeStopWords(self,tokens):
+        stopwordsList = stopwords.words('english')
+        stopwordsList.append('AT_USER')
+        stopwordsList.append('URL')
+        stopwordsList.append('at_user')
+        stopwordsList.append('url')
+        filtered_tokens= [word for word in tokens if word not in stopwordsList]
+        return filtered_tokens
 
     def writeUpdatedTweets(self,tweetsdf):
             wb = xl.load_workbook(filename=self.config.get('filepath'))
             sheet = wb.get_sheet_by_name(self.config.get('sheet2'))
             sheet._get_cell(1,1).value = 'User Handle'
             sheet._get_cell(1,2).value = 'Tweet'
-            sheet._get_cell(1,3).value = 'ReTweeted'
+            sheet._get_cell(1,3).value = 'Retweet count'
             sheet._get_cell(1,4).value = 'In Reply To'
             sheet._get_cell(1,5).value = 'Created At'
-            sheet._get_cell(1,6).value = 'Retweet count'
+            sheet._get_cell(1,6).value = 'ID'
             sheet._get_cell(1,7).value= 'Place'
             sheet._get_cell(1,8).value = 'Language'
             i = 2
@@ -39,12 +54,12 @@ class process_tweets:
                 if tweet != " ":
                     sheet._get_cell(i,1).value = tweetsdf.get_value(t,'User Handle')#user handle
                     sheet._get_cell(i,2).value = tweetsdf.get_value(t,'Tweet')
-                    sheet._get_cell(i,3).value = tweetsdf.get_value(t,'ReTweeted')
+                    sheet._get_cell(i,3).value = tweetsdf.get_value(t,'ReTweet Count')
                     sheet._get_cell(i,4).value = tweetsdf.get_value(t,'In Reply To')
-                    #sheet._get_cell(row,5).value = tweet['created_at']#created_at
-                    #sheet._get_cell(row,6).value = tweet['retweet_count']#retweet_count
-                    #sheet._get_cell(row,6).value = tweet['place']#Place
-                    #sheet._get_cell(i,8).value = tweetsdf.get_value(t,'Language')
+                    sheet._get_cell(i,5).value = tweetsdf.get_value(t,'Created At')
+                    sheet._get_cell(i,6).value = tweetsdf.get_value(t,'ID')
+                    sheet._get_cell(i,7).value = tweetsdf.get_value(t,'Place')
+                    sheet._get_cell(i,8).value = tweetsdf.get_value(t,'Language')
                     i+=1
             wb.save(filename=self.config.get('filepath'))
 

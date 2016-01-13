@@ -12,7 +12,7 @@ import utilities
 class processing:
 
     config = utilities.getConfigs()
-    target = config.get['target']
+    target = config.get('target')
     tokenizer = Chris_Potts_Tokenizer.Tokenizer()
     # This will be the main processor where the features in the data frame are going to be created.
     def getCountVector(self,frame, getSWM = True, getSubj = True, getPOSTags = True):

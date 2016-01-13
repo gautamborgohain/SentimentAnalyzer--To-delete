@@ -6,7 +6,7 @@ from nltk.corpus import stopwords
 
 class process_tweets:
 
-    config = getConfigs('c')
+    config = getConfigs()
     def regex_stuff(self,tweet):
         #Convert to lower case
         tweet = tweet.lower()
@@ -63,16 +63,25 @@ class process_tweets:
                     i+=1
             wb.save(filename=self.config.get('filepath'))
 
+    #This function is removing the unwanted tweets and returning the cleaned DF
     def removeBadTweets(self,tweetsdf):
+        newDF = pandas.DataFrame(columns=tweetsdf.columns)
+        baddatacount = 1
         for i in range(1,len(tweetsdf)):
             tweet = tweetsdf.get_value(i,'Tweet')
-            tweet = self.regex_stuff(tweet)
+            tweet = self.regex_stuff(tweet) # remove using the regex function
+            tweet = tweet.encode('ascii', 'ignore').decode('ascii')  #remove the weird characters
             if tweet.startswith('I\'m at ') or tweet.startswith('i\'m at '):
-                tweet = " "
-            tweetsdf = tweetsdf.set_value(i,'Tweet',tweet)
+                baddatacount +=1
+            else:
+                tweetsdf = tweetsdf.set_value(i,'Tweet',tweet)
+                newDF = newDF.append(tweetsdf[i:i+1])
+                #print(tweetsdf.ix[i])
 
+        print("Completed, Bad count = ", baddatacount)
+        print(newDF.head())
 
-        return tweetsdf
+        return newDF
 
     def runPreProcessing(self,tweetsdf):
         wb = xl.load_workbook(filename=self.config.get('filepath'))

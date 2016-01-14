@@ -8,6 +8,10 @@ import sentlex
 from nltk import pos_tag
 from nltk import word_tokenize
 import utilities
+from nltk import word_tokenize
+from nltk.tag.stanford import StanfordPOSTagger
+from nltk.tag.stanford import StanfordNERTagger
+import sys
 
 class processing:
 
@@ -151,7 +155,7 @@ class processing:
                         poslist = pos_tag(word_tokenize(tweet))
                         postag = poslist[count_word][1]
 
-                        if postag in ['NN','NNP','NNS','NNPS']:
+                        if postag in ['NN','NNP','NNS','NNPS']: # make the POS tags to the format used by the MPQA lexicon
                             postag = 'noun'
                         elif postag in ['VB','VBD','VBG','VBN','VBP','VBZ']:
                             postag = 'verb'
@@ -177,3 +181,17 @@ class processing:
         print('Completed Subjective Analysis')
         return df
 
+
+    def english_postagger(self,tweet):
+        english_tagger = StanfordPOSTagger('models/english-bidirectional-distsim.tagger')
+        tweet = re.sub('#','at ', tweet)  #removing the hash tags  and replacing with 'at ' its to make sure #smrt is 'at smrt'
+        tokens = word_tokenize(tweet)
+        result = english_tagger.tag(tokens)
+        return result
+
+    def english_nertagger(self,tweet):
+        english_ner = StanfordNERTagger('classifiers/english.all.3class.distsim.crf.ser.gz')
+        #tokens = word_tokenize(sentences)
+        #result = english_ner.tag_sents(sentences)
+        result = english_ner.tag(tweet.split())
+        return result

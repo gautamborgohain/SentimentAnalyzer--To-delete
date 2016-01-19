@@ -19,7 +19,7 @@ class processing:
     target = config.get('target')
     tokenizer = Chris_Potts_Tokenizer.Tokenizer()
     # This will be the main processor where the features in the data frame are going to be created.
-    def getCountVector(self,frame, getSWM = True, getSubj = True, getPOSTags = True):
+    def getCountVector(self,frame, getSWM = True, getSubj = True, getPOSTags = True, getTargetFeats = True, getHashTagFeats= True):
         vectorizer = CountVectorizer(min_df=1)
         tweets = []
 
@@ -33,15 +33,16 @@ class processing:
         for tweet in frame['Tweet']:
             tweet = highpoints.sub('',tweet)
             tweet = tweet.encode('ascii', 'ignore').decode('ascii')
+            tweet = self.cleantweet(tweet) # cleaning
             tweets.append(tweet)
 
         documentmatrix = vectorizer.fit_transform(tweets).toarray()
         columns = vectorizer.get_feature_names()
         df = pandas.DataFrame(data = documentmatrix, columns= columns)
 
+
         if getSWM == True:
-            scores = self.getSWN_features(frame)
-            posnegframe = pandas.DataFrame(scores,columns = ['SWN_POS','SWN_NEG'])
+            posnegframe = self.getSWN_features(frame)
             df = df.join(posnegframe)
 
         if getPOSTags == True:
@@ -51,6 +52,14 @@ class processing:
         if getSubj == True:
             subjframe = self.getSubjectvityfeatures(frame)
             df = df.join(subjframe)
+
+        if getTargetFeats == True:
+            targetframe = self.target_features(frame)
+            df = df.join(targetframe)
+
+        if getHashTagFeats == True:
+            hashFrame = self.get_hashTagSentiments(frame)
+            df = df.join(hashFrame)
 
         df = df.join(frame[self.config.get('target')])
         return df
@@ -94,13 +103,16 @@ class processing:
         classifier = sentlex.sentanalysis.BasicDocSentiScore()
         scores = []
         count = 1
+        # need to clean the tweets i think - remove the has tags and the atuse signs
         for tweet in frame['Tweet']:
             score = classifier.classify_document(tweet, tagged=False, L=lexicon, a=True, v=True, n=False, r=False, negation=False, verbose=False)
             scores.append(score)
             print("Scoreing using SWN3...", count)
             count += 1
         print('Completed scoring SWN3')
-        return scores
+        posnegframe = pandas.DataFrame(scores,columns = ['SWN_POS','SWN_NEG'])
+        posnegframe['SWN_Score'] = posnegframe['SWN_POS']/posnegframe['SWN_NEG']
+        return posnegframe
 
     def getPOStagfeatures(self,frame):
         """
@@ -134,11 +146,10 @@ class processing:
         :rtype: pandas dataframe
         """
         lexicon  = pandas.read_csv(self.config.get('SubjLexiconPath'))
-        reg = re.compile(r'at_user|rt|,|#')
         tweet_tags = []
         count_tweet = 1
         for tweet in frame['Tweet']:
-            tweet = re.sub(reg,'',tweet) #stripping it off stuff
+            tweet = self.cleantweet(tweet)
             typeList = []
             priorpolarityList = []
             count_word = 0 # this counter is for the pos tagging. traces the words in the tweet so that the idrect index of the tag can be accesses
@@ -185,6 +196,7 @@ class processing:
     def english_postagger(self,tweet):
         english_tagger = StanfordPOSTagger('models/english-bidirectional-distsim.tagger')
         tweet = re.sub('#','at ', tweet)  #removing the hash tags  and replacing with 'at ' its to make sure #smrt is 'at smrt'
+        print('POS Tagging')
         tokens = word_tokenize(tweet)
         result = english_tagger.tag(tokens)
         return result
@@ -195,3 +207,101 @@ class processing:
         #result = english_ner.tag_sents(sentences)
         result = english_ner.tag(tweet.split())
         return result
+
+    def cleantweet(self,tweet):
+        tweet = re.sub('url|at_user|rt|\.','',tweet) ## removing these from the tweets
+        return tweet
+
+    def target_features(self,frame):
+        tweet_target_features = []
+        for tweet in frame['Tweet']:
+            tags = self.get_hastags(tweet)
+            keywords = ['SMRT','mrt','MRT','smrt','Singapore_MRT']
+            tokens = word_tokenize(tweet)
+            targets_feature = []
+            for keyword in keywords:
+                if keyword in tags:  ## If i replace elif it if - Thing to note here is that the words which are hash tags will be counted twice here one from tokens and one from hashtags
+                    ind = tags.index(keyword)
+                    tag = tags[ind]
+                    feature = tag+'_hash'
+                    targets_feature.append(feature)
+                elif keyword in tokens:
+                    ind = tokens.index(keyword)
+                    tag = tokens[ind] # this is the target
+                    adjectives = self.getAdjectves(tweet)#This will get all the adjectives, not just one
+                    features = []
+                    for adjective in adjectives:
+                        adjective = re.sub('-','_',adjective)# this to take care of probelesm for - like east-west/ north-south.. now east_west
+                        features.append(tag+'_'+adjective)
+                    feature = ' '.join(features)
+                    targets_feature.append(feature)
+
+            tweet_target_features.append(' '.join(targets_feature))
+        print(tweet_target_features)
+        vectorizer = CountVectorizer(min_df=1)
+        tweetmatrix = vectorizer.fit_transform(tweet_target_features).toarray()
+        columns = vectorizer.get_feature_names()
+        print(columns)
+        columns = [word.upper() for word in columns]  # uppercasing to avoid conflict of positive negative
+        df = pandas.DataFrame(data = tweetmatrix, columns= columns)
+        return df
+
+    def get_hastags(self,tweet):
+        tweet = tweet.split('#')
+        hash_tag = []
+        for cen in tweet:
+            cen_new = cen.split(' ')
+            hash_tag.insert(0,cen_new[0])
+            for k in hash_tag:
+                if k == '':
+                    hash_tag.remove(k)
+
+        return hash_tag
+
+    def getAdjectves(self,tweet):
+        postags = ['JJ','JJR','JJS']
+        tokens = []
+        pos_tags = self.english_postagger(tweet)
+        pos_tags_1 = []
+        words_1 = []
+        for pos in pos_tags:
+            pos_tags_1.append(pos[1])
+
+        for pos in pos_tags:
+            words_1.append(pos[0])
+
+        for postag in postags:
+            if postag in pos_tags_1:
+                inds = self.all_indices(postag,pos_tags_1)
+                for ind in inds:
+                    tokens.append(words_1[ind])
+
+        return tokens
+
+    def all_indices(self,value, qlist):
+        indices = []
+        idx = -1
+        while True:
+            try:
+                idx = qlist.index(value, idx+1)
+                indices.append(idx)
+            except ValueError:
+                break
+        return indices
+
+    def get_hashTagSentiments(self,frame):
+
+        tweets = []
+        for tweet in frame['Tweet']:
+            tweet = self.cleantweet(tweet)
+            tags = self.get_hastags(tweet)
+            tweets.append(" ".join(tags))
+
+        frame['Tweet'] = tweets
+        df = self.getSubjectvityfeatures(frame)
+        columns = df.columns
+        new_columns = []
+        for column in columns:
+            new_columns.append('TAG_'+column)
+        df.columns = new_columns
+        return df

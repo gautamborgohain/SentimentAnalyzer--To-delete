@@ -5,10 +5,10 @@ import pandas
 from sklearn.cross_validation import train_test_split
 from sklearn.metrics import accuracy_score,confusion_matrix,f1_score,precision_recall_curve,classification_report
 
-class classifiers:
+class ML_classifiers:
 
     config = utilities.getConfigs()
-    target = config.get['target']
+    target = config.get('target')
 
     #This will be the SVM classifier where we have the option to split the input frame to training and test set and specify the %split
     # if have seperate test set then just pass it ti frame_totest
@@ -17,7 +17,7 @@ class classifiers:
 
     def SVMclassifier(self,frame,frame_totest,split = True,percent = 0.8,C = 3.0, gamma = 'auto', kernel = 'linear'):
         #Also to try :sklearn.svm.LinearSVC and sklearn.svm.SVR
-        classifier = SVC(C =C, gamma = gamma, kernel = kernel) # gamma is float, Kernel options are ‘linear’, ‘poly’, ‘rbf’, ‘sigmoid’, ‘precomputed’
+        classifier = SVC(C =C, gamma = gamma, kernel = kernel)
         training_set = frame
         testing_set = frame_totest
         if split == True:
@@ -27,10 +27,12 @@ class classifiers:
         classifier.fit(training_set,training_set[self.target])
         #cross_validation.cross_val_score(classifier,training_set,training_set[self.config.get['target']],scoring = 'f1')
         predictions_training = classifier.predict(training_set)
-        training_set.join(data = predictions_training, columns = 'Predictions')
+        training_set['Predictions'] = predictions_training
+        #training_set.join(predictions_training,'Predictions')
         training_true = training_set[self.target]
         predictions_testing = classifier.predict(testing_set)
-        testing_set.join(data = predictions_testing, columns = 'Predictions')
+        testing_set['Predictions'] =  predictions_testing
+        #testing_set.join(predictions_testing,'Predictions')
         testing_true = testing_set[self.target]
 
 
@@ -49,9 +51,11 @@ class classifiers:
         f1_testing = f1_score(testing_true, predictions_testing, average='weighted')
 
 
-        precision, recall, thresholds = precision_recall_curve(training_true, predictions_training)
+       # precision, recall, thresholds = precision_recall_curve(training_true, predictions_training)
 
         report_training = classification_report(training_true, predictions_training)
         report_testing = classification_report(testing_true, predictions_testing)
 
-        return classifier
+
+
+        return accuracy_testing

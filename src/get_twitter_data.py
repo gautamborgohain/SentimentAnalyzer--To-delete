@@ -8,17 +8,16 @@ class TwitterData:
     config = getConfigs()
     def searchTwitter(self,keyword):
         tso = TwitterSearchOrder()
-
-        ts = TwitterSearch(
-            consumer_key=self.config.get('consumer_key'),
-            consumer_secret=self.config.get('consumer_secret'),
-            access_token = self.config.get('access_token'),
-            access_token_secret = self.config.get('access_token_secret')
+        tws = TwitterSearch(
+                consumer_key=self.config.get('consumer_key'),
+                consumer_secret=self.config.get('consumer_secret'),
+                access_token = self.config.get('access_token'),
+                access_token_secret = self.config.get('access_token_secret')
         )
-        tso.set_keywords(keyword)
+        tso.set_keywords(['realDonaldTrump','Donald Trump','Donald J Trump','Trump'], or_operator=True)
         tso.set_language('en')
-        #tso.set_until(datetime.date(2016,1,1))
-        tweets = ts.search_tweets_iterable(tso)
+        #tso.set_until(datetime.date(2016-01-20))
+        tweets = tws.search_tweets_iterable(tso)
         return tweets
 
     def setupthesheet(self):
@@ -34,12 +33,17 @@ class TwitterData:
         sheet._get_cell(1,8).value = 'Language'
         return sheet,wb
 
+
+    #need to add the ability to search multiple keywords.
+    # need to have the ability to store the csv in a seperate location with the timestamp of the running
+
+    # Also give a wayto print out the dates that are used..
     def saveTweets(self,keyword):
         sheet,wb = self.setupthesheet()
-        keyword_list = list()
-        keyword_list.append(keyword)
+        # keyword_list = list()
+        # keyword_list.append(keyword)
         try:
-            tweets = self.searchTwitter(keyword_list)
+            tweets = self.searchTwitter(keyword)
         except TwitterSearchException as e:
             print(e)
         row = 2

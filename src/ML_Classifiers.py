@@ -1,14 +1,37 @@
 import utilities
 from sklearn import svm,cross_validation
 from sklearn.svm import SVC
+from sklearn.feature_selection import RFECV
+from sklearn.svm import LinearSVC
 import pandas
 from sklearn.cross_validation import train_test_split
 from sklearn.metrics import accuracy_score,confusion_matrix,f1_score,precision_recall_curve,classification_report
+import matplotlib.pyplot as plt
+
 
 class ML_classifiers:
 
     config = utilities.getConfigs()
     target = config.get('target')
+
+    def featureSelction(self,frame):
+        est = SVC(kernel = "linear")
+        selector = RFECV(estimator=est,step=2,scoring='accuracy')
+        train = frame.drop(self.target,1)
+        selector = selector.fit(train, frame[self.target])
+        print(selector.n_features_)
+        print(selector.ranking_)
+        print sorted(zip(map(lambda x: round(x, 4), selector.ranking_), train.columns))
+        #X_train_reduced = selector.transform(frame)
+        #X_test_reduced = feature_selector.transform(X_test)
+
+        plt.figure()
+        plt.xlabel("Number of features selected")
+        plt.ylabel("Cross validation score (nb of correct classifications)")
+        plt.plot(range(1, len(selector.grid_scores_) + 1), selector.grid_scores_)
+        plt.show()
+        return selector
+
 
     #This will be the SVM classifier where we have the option to split the input frame to training and test set and specify the %split
     # if have seperate test set then just pass it ti frame_totest
@@ -17,7 +40,9 @@ class ML_classifiers:
 
     def SVMclassifier(self,frame,frame_totest,split = True,percent = 0.8,C = 3.0, gamma = 'auto', kernel = 'linear'):
         #Also to try :sklearn.svm.LinearSVC and sklearn.svm.SVR
-        classifier = SVC(C =C, gamma = gamma, kernel = kernel)
+        #classifier = SVC(C =C, gamma = gamma, kernel = kernel)
+        classifier = LinearSVC()
+
         training_set = frame
         testing_set = frame_totest
         if split == True:

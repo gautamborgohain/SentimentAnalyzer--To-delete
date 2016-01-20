@@ -20,5 +20,8 @@ df.to_csv('/Users/gautamborgohain/Desktop/data_temp.csv')
 sys.path.extend(['/Users/gautamborgohain/PycharmProjects/SentimentAnalyzer/src'])
 import pandas
 
-data = pandas.read_excel('/Users/gautamborgohain/Desktop/data_labelled_2.xlsx')
-train = pandas.read_csv('/Users/gautamborgohain/Desktop/data_temp2.csv')
+data = pandas.read_excel('/Users/gautamborgohain/Desktop/SA Files/data_labelled_2.xlsx')
+train = pandas.read_csv('/Users/gautamborgohain/Desktop/SA Files/data_temp2.csv')
+
+reload(ML_Classifiers)
+ml = ML_Classifiers.ML_classifiers()

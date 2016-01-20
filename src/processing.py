@@ -61,6 +61,18 @@ class processing:
             hashFrame = self.get_hashTagSentiments(frame)
             df = df.join(hashFrame)
 
+
+        # Negations
+
+        # Emoticon
+
+        #Punctuation
+
+        #Elongated words
+
+        #URL ??
+
+
         df = df.join(frame[self.config.get('target')])
         return df
 

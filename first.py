@@ -1,12 +1,11 @@
 #this project is about taking in sentences or bodies of text, parsing them. creating certain visualizations and then classify the sentence as different emotions or positive negative
 
-import lexicon_classification
-
 filepath = '/Users/gautamborgohain/Desktop/CI/data.csv'
 
 
 
-In[3]: import nltk,re,pprint
+In[3]: import nltk
+
 In[4]: def ie_preprocess(document):
         sentences = nltk.sent_tokenize(docuument)
         sentences = [nltk.word_tokenize(sent) for sent in sentences]
